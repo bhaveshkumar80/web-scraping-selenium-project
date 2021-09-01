@@ -54,90 +54,111 @@ Allow_cookies(driver)
 
 time.sleep(5)
 
+num_of_pages = driver.find_element_by_css_selector('.p-items:nth-child(7) a').text
+print('Num of pages : ', num_of_pages)
 All_data_list = []
-names = []
-all_links = driver.find_elements_by_css_selector('.font-regular , .brand-banner-full')
-for n in all_links:
-     names.append(n.text)
-
-for name in names[:3]:
-
-     link = WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.LINK_TEXT, name)))
-
-     link.click()
-     data_dict = {}
-     try:
-          link_header = link.get_attribute('href')
-     except:
-          link_header = ""
-
-     try:
-          modal_popup = WebDriverWait(driver, 15).until(
-               EC.presence_of_element_located((By.XPATH, '//*[@id="is24-expose-modal"]/div/div/div/div/div/div[2]/button'))
-          )
-          modal_popup.click()
-     except:
-          pass
-
-     time.sleep(5)
-     
-     multiple_elements = driver.find_elements_by_class_name('breadcrumb__link')
-     choose_states = []
-     for i in multiple_elements:
-          choose_states.append(i.text)
-
-     state = choose_states[1]
-
-     try:
-          scout_id = driver.find_element_by_xpath('//*[@id="is24-content"]/div[2]/div/div[3]/div/div/div').text
-     except:
-          scout_id = ""
-
-     try:
-          address = driver.find_element_by_class_name('zip-region-and-country').text
-     except:
-          address = ""
-
-     grid_keys = []
-     grid_values = []
-     grid_content = driver.find_elements_by_css_selector('.two-fifths , .three-fifths')
-     
-     for i, grid in enumerate(grid_content):
-          if i%2 == 0:
-               grid_keys.append(grid.text)
-               
-          else:
-               grid_values.append(grid.text)
-               
-
-     grids = {}
-     for k, v in zip(grid_keys, grid_values):
-          grids[k] = v
-
-     try:
-          objectb = driver.find_element_by_css_selector('.is24qa-objektbeschreibung-label').text
-          objectb_text = driver.find_element_by_css_selector('.is24qa-objektbeschreibung').text
-          grids[objectb] = objectb_text
-     except:
-          pass
-
-     data_dict['Link_Header_Project_Name'] = name
-     data_dict['State'] = state
-     data_dict['Link_Header_project_Url'] = link_header
-     data_dict['Scout id'] = scout_id
-     data_dict['Address'] = address
-     data_dict['Timestamp'] = datetime.now()
-     data_dict['Data'] = grids
-          
-     All_data_list.append(data_dict)
-     with open('Kaufen_Anlageobjekte.json', mode='w', encoding='utf-8') as f:
-          json.dump([], f)
-
-     with open('Kaufen_Anlageobjekte.json', mode='w', encoding='utf-8') as feedsjson:
-          json.dump(All_data_list, feedsjson, indent=4, default=str)
-
-     driver.back()
+for page in range(1, int(num_of_pages)):
+     print('Page : ', page)
+     names = []
      driver.implicitly_wait(5)
+     if page == 1:
+          all_links = driver.find_elements_by_css_selector('.maxtwolinerHeadline')
+     else:
+          all_links = driver.find_elements_by_css_selector('#resultListItems .font-regular')
+
+     for n in all_links:
+          names.append(n.text)
+
+     print('Length : ', len(names))
+     print(names)
+
+     for name in names[:2]:
+
+          link = WebDriverWait(driver, 15).until(EC.presence_of_element_located((By.LINK_TEXT, name)))
+
+          link.click()
+          data_dict = {}
+          try:
+               link_header = link.get_attribute('href')
+          except:
+               link_header = ""
+
+          try:
+               modal_popup = WebDriverWait(driver, 15).until(
+                    EC.presence_of_element_located((By.XPATH, '//*[@id="is24-expose-modal"]/div/div/div/div/div/div[2]/button'))
+               )
+               modal_popup.click()
+          except:
+               pass
+
+          time.sleep(3)
+          
+          multiple_elements = driver.find_elements_by_class_name('breadcrumb__link')
+          choose_states = []
+          for i in multiple_elements:
+               choose_states.append(i.text)
+
+          state = choose_states[1]
+
+          try:
+               scout_id = driver.find_element_by_xpath('//*[@id="is24-content"]/div[2]/div/div[3]/div/div/div').text
+          except:
+               scout_id = ""
+
+          try:
+               address = driver.find_element_by_class_name('zip-region-and-country').text
+          except:
+               address = ""
+
+          try:
+               grid_keys = []
+               grid_values = []
+               grid_content = driver.find_elements_by_css_selector('.two-fifths , .three-fifths')
+               
+               for i, grid in enumerate(grid_content):
+                    if i%2 == 0:
+                         grid_keys.append(grid.text)
+                         
+                    else:
+                         grid_values.append(grid.text)
+                         
+
+               grids = {}
+               for k, v in zip(grid_keys, grid_values):
+                    grids[k] = v
+          except:
+               Print('Grid data is not present')
+               pass
+               
+
+          try:
+               objectb = driver.find_element_by_css_selector('.is24qa-objektbeschreibung-label').text
+               objectb_text = driver.find_element_by_css_selector('.is24qa-objektbeschreibung').text
+               grids[objectb] = objectb_text
+          except:
+               pass
+
+          data_dict['Link_Header_Project_Name'] = name
+          data_dict['State'] = state
+          data_dict['Link_Header_project_Url'] = link_header
+          data_dict['Scout id'] = scout_id
+          data_dict['Address'] = address
+          data_dict['Timestamp'] = datetime.now()
+          data_dict['Data'] = grids
+               
+          All_data_list.append(data_dict)
+          with open('Kaufen_Anlageobjekte.json', mode='w', encoding='utf-8') as f:
+               json.dump([], f)
+
+          with open('Kaufen_Anlageobjekte.json', mode='w', encoding='utf-8') as feedsjson:
+               json.dump(All_data_list, feedsjson, indent=4, default=str)
+
+          driver.back()
+
+     next_page = WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.CSS_SELECTOR, '.is24-icon-chevron-right.vertical-center')))
+     next_page.click()
+
+     
 
 
 
