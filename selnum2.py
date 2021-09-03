@@ -19,26 +19,26 @@ opts.add_argument('--ignore-certificate-errors')
 opts.add_argument('--ignore-ssl-errors')
 
 
-def page_counter(file_name, url, n = 0, start_page = 0):
+def page_counter(file_name, url, json_data_list = [], nth_element = 0, start_page = 1):
 
     if os.path.isfile(file_name):
         with open(file_name, 'r') as f:
-            json_data = json.load(f)
+            json_data_list = json.load(f)
 
-        if len(json_data) >= 20:
-            url = url + '?pagenumber=' + str(int(len(json_data) // 20))
+        start_page = int(len(json_data_list) // 20) + 1
+        if len(json_data_list) >= 20:
+            url = url + '?pagenumber=' + str(start_page)
 
-        start_page = int(len(json_data) // 20)
 
-        n = len(json_data) % 20
+        nth_element = int(len(json_data_list) % 20)
 
-        return url, n, start_page
+        return url, json_data_list, nth_element, start_page
 
     else:
         with open(file_name, mode='w', encoding='utf-8') as f:
             json.dump([], f)
 
-        return url, n, start_page
+        return url, json_data_list, nth_element, start_page
 
 def Captcha_Bypass(driver):
 
@@ -66,7 +66,7 @@ def Allow_cookies(driver):
     WebDriverWait(driver,20).until(EC.frame_to_be_available_and_switch_to_it((By.XPATH,'//*[@id="gdpr-consent-notice"]')))
     WebDriverWait(driver,20).until(EC.element_to_be_clickable((By.XPATH, '//*[@id="save"]'))).click()
 
-def Selenium_scraper(url, file_name, start_page, n):
+def Selenium_scraper(url, file_name, json_data_list, start_page, nth_element):
     driver = webdriver.Chrome(chrome_options=opts, executable_path=r'G:\chromedriver.exe')
     driver.get(url)
 
@@ -85,11 +85,11 @@ def Selenium_scraper(url, file_name, start_page, n):
 
     # [baden-wuerttemberg, bayern, hessen, niedersachsen, nordrhein-westfalen, rheinland-pfalz, thueringen]
 
-    time.sleep(5)
+    driver.implicitly_wait(5)
 
-    num_of_pages = driver.find_element_by_css_selector('.p-items:nth-child(7) a').text
+    num_of_pages = int(driver.find_element_by_css_selector('.p-items:nth-child(7) a').text)
     print('Num of pages : ', num_of_pages)
-    All_data_list = []
+
     for page in range(start_page, int(num_of_pages)):
         print('Page : ', page)
         names = []
@@ -105,9 +105,12 @@ def Selenium_scraper(url, file_name, start_page, n):
         print('Length : ', len(names))
         print(names)
 
-        for name in names[n:]:
+        if start_page != page:
+            nth_element = 0
 
-            link = WebDriverWait(driver, 15).until(EC.presence_of_element_located((By.LINK_TEXT, name)))
+        for name in names[nth_element:]:
+
+            link = WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.LINK_TEXT, name)))
 
             data_dict = {}
             try:
@@ -117,13 +120,13 @@ def Selenium_scraper(url, file_name, start_page, n):
 
             link.click()
 
-            try:
-                modal_popup = WebDriverWait(driver, 15).until(
-                        EC.presence_of_element_located((By.XPATH, '//*[@id="is24-expose-modal"]/div/div/div/div/div/div[2]/button'))
-                )
-                modal_popup.click()
-            except:
-                pass
+            # try:
+            #     modal_popup = WebDriverWait(driver, 15).until(
+            #             EC.presence_of_element_located((By.XPATH, '//*[@id="is24-expose-modal"]/div/div/div/div/div/div[2]/button'))
+            #     )
+            #     modal_popup.click()
+            # except:
+            #     pass
 
             driver.implicitly_wait(5)
             soup = BeautifulSoup(driver.page_source, 'lxml')
@@ -157,7 +160,15 @@ def Selenium_scraper(url, file_name, start_page, n):
                     grid_dict[k] = v
             except:
                 grid_dict = {}
+
+            try:
+                objectb = soup.select_one('.is24qa-objektbeschreibung-label').get_text(strip=True)
+                objectb_text = soup.select_one('.is24qa-objektbeschreibung').get_text(strip=True)
+                grid_dict[objectb] = objectb_text
+            except:
+                pass
         
+            driver.back()
 
             data_dict['Link_Header_Project_Name'] = name
             data_dict['State'] = state
@@ -166,12 +177,11 @@ def Selenium_scraper(url, file_name, start_page, n):
             data_dict['Address'] = address
             data_dict['Timestamp'] = datetime.now()
             data_dict['Data'] = grid_dict
-            
-            All_data_list.append(data_dict)
-            driver.back()
+        
 
-            with open('Kaufen_Anlageobjekte.json', mode='w', encoding='utf-8') as feedsjson:
-                json.dump(All_data_list, feedsjson, indent=4, default=str)
+            json_data_list.append(data_dict)
+            with open(file_name, mode='w', encoding='utf-8') as feedsjson:
+                json.dump(json_data_list, feedsjson, indent=4, default=str)
 
 
         next_page = WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.CSS_SELECTOR, '.is24-icon-chevron-right.vertical-center')))
@@ -180,18 +190,6 @@ def Selenium_scraper(url, file_name, start_page, n):
 file_name = 'Kaufen_Anlageobjekte.json'
 url = 'https://www.immobilienscout24.de/Suche/de/baden-wuerttemberg/anlageimmobilie'
 
-url, n, start_page = page_counter(file_name, url)
+url, json_data_list, nth_element, start_page = page_counter(file_name, url)
 
-     
-
-
-
-
-
-#//*[@id="is24-content"]/div[3]/div[1]/div[2]/dl[1]/dt
-#//*[@id="is24-content"]/div[3]/div[1]/div[2]/dl[2]/dt
-
-#//*[@id="is24-content"]/div[3]/div[1]/div[2]/dl[1]
-
-# //*[@id="result-xl-129280384"]/div[1]/a[1]
-# //*[@id="result-xl-128580468"]/div[1]/a[1]
+Selenium_scraper(url, file_name, json_data_list, start_page, nth_element)
