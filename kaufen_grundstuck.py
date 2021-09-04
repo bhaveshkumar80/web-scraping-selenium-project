@@ -87,17 +87,20 @@ def Selenium_scraper(url, file_name, json_data_list, start_page, nth_element):
 
     driver.implicitly_wait(5)
 
-    num_of_pages = int(driver.find_element_by_css_selector('.p-items:nth-child(7) a').text)
+    try:
+        num_of_pages = int(driver.find_element_by_css_selector('.p-items:nth-child(7) a').text)
+    except:
+        num_of_pages = int(driver.find_element_by_css_selector('.p-items:nth-child(8) a').text)
     print('Num of pages : ', num_of_pages)
 
     for page in range(start_page, int(num_of_pages)):
         print('Page : ', page)
         names = []
         driver.implicitly_wait(5)
-        if page == 1:
-            all_links = driver.find_elements_by_css_selector('.maxtwolinerHeadline')
-        else:
-            all_links = driver.find_elements_by_css_selector('#resultListItems .font-regular')
+        #if page == 1:
+        all_links = driver.find_elements_by_css_selector('a .maxtwolinerHeadline')
+        #else:
+        #    all_links = driver.find_elements_by_css_selector('#resultListItems .font-regular')
 
         for n in all_links:
             names.append(n.text)
@@ -109,14 +112,20 @@ def Selenium_scraper(url, file_name, json_data_list, start_page, nth_element):
             nth_element = 0
 
         for name in names[nth_element:]:
-
-            link = WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.LINK_TEXT, name)))
+            
+            try:
+                link = WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.LINK_TEXT, name)))
+            except:
+                continue
 
             data_dict = {}
             try:
                 link_header = link.get_attribute('href')
             except:
                 link_header = ""
+
+            if link_header.split('.')[-1] == 'html':
+                continue
 
             link.click()
 
@@ -128,7 +137,7 @@ def Selenium_scraper(url, file_name, json_data_list, start_page, nth_element):
             # except:
             #     pass
 
-            driver.implicitly_wait(5)
+            driver.implicitly_wait(10)
             soup = BeautifulSoup(driver.page_source, 'lxml')
             
             try:
@@ -167,8 +176,6 @@ def Selenium_scraper(url, file_name, json_data_list, start_page, nth_element):
                 grid_dict[objectb] = objectb_text
             except:
                 pass
-        
-            driver.back()
 
             data_dict['Link_Header_Project_Name'] = name
             data_dict['State'] = state
@@ -177,19 +184,34 @@ def Selenium_scraper(url, file_name, json_data_list, start_page, nth_element):
             data_dict['Address'] = address
             data_dict['Timestamp'] = datetime.now()
             data_dict['Data'] = grid_dict
-        
 
             json_data_list.append(data_dict)
             with open(file_name, mode='w', encoding='utf-8') as feedsjson:
                 json.dump(json_data_list, feedsjson, indent=4, default=str)
 
+            driver.back()
+
 
         next_page = WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.CSS_SELECTOR, '.is24-icon-chevron-right.vertical-center')))
         next_page.click()
 
-file_name = 'Kaufen_Anlageobjekte.json'
-url = 'https://www.immobilienscout24.de/Suche/de/baden-wuerttemberg/anlageimmobilie'
+file_name = 'Mieten_Wohnungen.json'
+url = 'https://www.immobilienscout24.de/Suche/de/berlin/berlin/wohnung-mieten'
 
 url, json_data_list, nth_element, start_page = page_counter(file_name, url)
 
 Selenium_scraper(url, file_name, json_data_list, start_page, nth_element)
+
+     
+
+
+
+
+
+#//*[@id="is24-content"]/div[3]/div[1]/div[2]/dl[1]/dt
+#//*[@id="is24-content"]/div[3]/div[1]/div[2]/dl[2]/dt
+
+#//*[@id="is24-content"]/div[3]/div[1]/div[2]/dl[1]
+
+# //*[@id="result-xl-129280384"]/div[1]/a[1]
+# //*[@id="result-xl-128580468"]/div[1]/a[1]
