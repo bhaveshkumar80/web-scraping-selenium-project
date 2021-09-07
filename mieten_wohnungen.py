@@ -5,6 +5,7 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.common.action_chains import ActionChains
 from selenium.webdriver.chrome.options import Options
+from selenium.common.exceptions import TimeoutException
 import time
 import random
 from datetime import datetime
@@ -56,7 +57,6 @@ def Captcha_Bypass(driver):
 
     actions.click(other_place)
 
-
     upgrade_actions = ActionChains(driver)
     upgrade_actions.move_to_element(captcha)
     upgrade_actions.click()
@@ -66,9 +66,7 @@ def Allow_cookies(driver):
     WebDriverWait(driver,20).until(EC.frame_to_be_available_and_switch_to_it((By.XPATH,'//*[@id="gdpr-consent-notice"]')))
     WebDriverWait(driver,20).until(EC.element_to_be_clickable((By.XPATH, '//*[@id="save"]'))).click()
 
-def Selenium_scraper(url, file_name, json_data_list, start_page, nth_element):
-    driver = webdriver.Chrome(chrome_options=opts, executable_path=r'G:\chromedriver.exe')
-    driver.get(url)
+def Selenium_scraper(url, file_name, json_data_list, start_page, nth_element, driver):
 
     bypass = 0
     while True:
@@ -151,11 +149,6 @@ def Selenium_scraper(url, file_name, json_data_list, start_page, nth_element):
                 address = ""
 
             try:
-                state = soup.select_one('.breadcrumb__item:nth-child(2) .breadcrumb__link').get_text(strip=True)
-            except:
-                state = ""
-            
-            try:
                 gkeys = []
                 gvalues = []
                 for i, grid in enumerate(soup.select('.two-fifths , .three-fifths')):
@@ -178,7 +171,7 @@ def Selenium_scraper(url, file_name, json_data_list, start_page, nth_element):
                 pass
 
             data_dict['Link_Header_Project_Name'] = name
-            data_dict['State'] = state
+            data_dict['State'] = url.split('/')[-2]
             data_dict['Link_Header_project_Url'] = link_header
             data_dict['Scout id'] = scout_id
             data_dict['Address'] = address
@@ -195,9 +188,37 @@ def Selenium_scraper(url, file_name, json_data_list, start_page, nth_element):
         next_page = WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.CSS_SELECTOR, '.is24-icon-chevron-right.vertical-center')))
         next_page.click()
 
-file_name = 'Mieten_Wohnungen.json'
-url = 'https://www.immobilienscout24.de/Suche/de/berlin/berlin/wohnung-mieten'
+url_list = ["https://www.immobilienscout24.de/Suche/de/berlin/berlin/wohnung-mieten",
+            "https://www.immobilienscout24.de/Suche/de/bayern/wohnung-mieten",
+            "https://www.immobilienscout24.de/Suche/de/brandenburg/wohnung-mieten",
+            "https://www.immobilienscout24.de/Suche/de/bremen/wohnung-mieten",
+            "https://www.immobilienscout24.de/Suche/de/hamburg/hamburg/wohnung-mieten",
+            "https://www.immobilienscout24.de/Suche/de/hessen/wohnung-mieten",
+            "https://www.immobilienscout24.de/Suche/de/niedersachsen/wohnung-mieten",
+            "https://www.immobilienscout24.de/Suche/de/mecklenburg-vorpommern/wohnung-mieten",
+            "https://www.immobilienscout24.de/Suche/de/nordrhein-westfalen/wohnung-mieten",
+            "https://www.immobilienscout24.de/Suche/de/rheinland-pfalz/wohnung-mieten",
+            "https://www.immobilienscout24.de/Suche/de/saarland/wohnung-mieten",
+            "https://www.immobilienscout24.de/Suche/de/sachsen/wohnung-mieten",
+            "https://www.immobilienscout24.de/Suche/de/sachsen-anhalt/wohnung-mieten",
+            "https://www.immobilienscout24.de/Suche/de/schleswig-holstein/wohnung-mieten",
+            "https://www.immobilienscout24.de/Suche/de/thueringen/wohnung-mieten"]
 
-url, json_data_list, nth_element, start_page = page_counter(file_name, url)
 
-Selenium_scraper(url, file_name, json_data_list, start_page, nth_element)
+def MW():
+    file_name = 'Mieten_Wohnungen.json'
+
+    for url in url_list:
+        while True:
+            try:
+                driver = webdriver.Chrome(chrome_options=opts, executable_path=r'G:\chromedriver.exe')
+                driver.get(url)
+
+                url, json_data_list, nth_element, start_page = page_counter(file_name, url)
+                Selenium_scraper(url, file_name, json_data_list, start_page, nth_element, driver)
+                if url == url_list[-1]:
+                    break
+
+            except TimeoutException as exception:
+                driver.quit()
+                continue

@@ -5,6 +5,7 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.common.action_chains import ActionChains
 from selenium.webdriver.chrome.options import Options
+from selenium.common.exceptions import TimeoutException
 import time
 import random
 from datetime import datetime
@@ -66,10 +67,7 @@ def Allow_cookies(driver):
     WebDriverWait(driver,20).until(EC.frame_to_be_available_and_switch_to_it((By.XPATH,'//*[@id="gdpr-consent-notice"]')))
     WebDriverWait(driver,20).until(EC.element_to_be_clickable((By.XPATH, '//*[@id="save"]'))).click()
 
-def Selenium_scraper(url, file_name, json_data_list, start_page, nth_element):
-    driver = webdriver.Chrome(chrome_options=opts, executable_path=r'G:\chromedriver.exe')
-    driver.get(url)
-
+def Selenium_scraper(url, file_name, json_data_list, start_page, nth_element, driver):
     bypass = 0
     while True:
         try:
@@ -96,10 +94,10 @@ def Selenium_scraper(url, file_name, json_data_list, start_page, nth_element):
         print('Page : ', page)
         names = []
         driver.implicitly_wait(5)
-        if page == 1:
-            all_links = driver.find_elements_by_css_selector('.maxtwolinerHeadline')
-        else:
-            all_links = driver.find_elements_by_css_selector('#resultListItems .font-regular')
+        #if page == 1:
+        all_links = driver.find_elements_by_css_selector('a .maxtwolinerHeadline')
+        #else:
+        #    all_links = driver.find_elements_by_css_selector('#resultListItems .font-regular')
 
         for n in all_links:
             names.append(n.text)
@@ -142,11 +140,6 @@ def Selenium_scraper(url, file_name, json_data_list, start_page, nth_element):
                 address = soup.select_one('.zip-region-and-country').get_text(strip=True)
             except:
                 address = ""
-
-            try:
-                state = soup.select_one('.breadcrumb__item:nth-child(2) .breadcrumb__link').get_text(strip=True)
-            except:
-                state = ""
             
             try:
                 gkeys = []
@@ -169,11 +162,11 @@ def Selenium_scraper(url, file_name, json_data_list, start_page, nth_element):
                 grid_dict[objectb] = objectb_text
             except:
                 pass
-        
+
             driver.back()
 
             data_dict['Link_Header_Project_Name'] = name
-            data_dict['State'] = state
+            data_dict['State'] = url.split('/')[-2]
             data_dict['Link_Header_project_Url'] = link_header
             data_dict['Scout id'] = scout_id
             data_dict['Address'] = address
@@ -183,15 +176,46 @@ def Selenium_scraper(url, file_name, json_data_list, start_page, nth_element):
 
             json_data_list.append(data_dict)
             with open(file_name, mode='w', encoding='utf-8') as feedsjson:
-                json.dump(json_data_list, feedsjson, indent=4, default=str)
+                json.dump(json_data_list, feedsjson, indent=4, default=str)  
 
 
         next_page = WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.CSS_SELECTOR, '.is24-icon-chevron-right.vertical-center')))
         next_page.click()
 
-file_name = 'Kaufen_Anlageobjekte.json'
-url = 'https://www.immobilienscout24.de/Suche/de/baden-wuerttemberg/anlageimmobilie'
 
-url, json_data_list, nth_element, start_page = page_counter(file_name, url)
+url_list = ["https://www.immobilienscout24.de/Suche/de/baden-wuerttemberg/anlageimmobilie",
+            "https://www.immobilienscout24.de/Suche/de/bayern/anlageimmobilie",
+            "https://www.immobilienscout24.de/Suche/de/berlin/berlin/anlageimmobilie",
+            "https://www.immobilienscout24.de/Suche/de/brandenburg/anlageimmobilie",
+            "https://www.immobilienscout24.de/Suche/de/bremen/anlageimmobilie",
+            "https://www.immobilienscout24.de/Suche/de/hamburg/hamburg/anlageimmobilie",
+            "https://www.immobilienscout24.de/Suche/de/hessen/anlageimmobilie",
+            "https://www.immobilienscout24.de/Suche/de/niedersachsen/anlageimmobilie",
+            "https://www.immobilienscout24.de/Suche/de/mecklenburg-vorpommern/anlageimmobilie",
+            "https://www.immobilienscout24.de/Suche/de/nordrhein-westfalen/anlageimmobilie",
+            "https://www.immobilienscout24.de/Suche/de/rheinland-pfalz/anlageimmobilie",
+            "https://www.immobilienscout24.de/Suche/de/saarland/anlageimmobilie",
+            "https://www.immobilienscout24.de/Suche/de/sachsen/anlageimmobilie",
+            "https://www.immobilienscout24.de/Suche/de/sachsen-anhalt/anlageimmobilie",
+            "https://www.immobilienscout24.de/Suche/de/schleswig-holstein/anlageimmobilie",
+            "https://www.immobilienscout24.de/Suche/de/thueringen/anlageimmobilie"]
 
-Selenium_scraper(url, file_name, json_data_list, start_page, nth_element)
+def KA():
+    file_name = 'Kaufen_Anlageobjekte.json'
+
+    for url in url_list:
+
+        while True:
+            try:
+                driver = webdriver.Chrome(chrome_options=opts, executable_path=r'G:\chromedriver.exe')
+                driver.get(url)
+
+                url, json_data_list, nth_element, start_page = page_counter(file_name, url)
+                Selenium_scraper(url, file_name, json_data_list, start_page, nth_element, driver)
+                if url == url_list[-1]:
+                    break
+
+            except TimeoutException as exception:
+                driver.quit()
+                continue
+
