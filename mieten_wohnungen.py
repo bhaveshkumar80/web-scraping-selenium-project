@@ -21,19 +21,20 @@ opts.add_argument('--ignore-ssl-errors')
 
 
 def page_counter(file_name, url, json_data_list = [], nth_element = 0, start_page = 1):
-
     if os.path.isfile(file_name):
         with open(file_name, 'r') as f:
             json_data_list = json.load(f)
 
         start_page = int(len(json_data_list) // 20) + 1
         if len(json_data_list) >= 20:
-            url = url + '?pagenumber=' + str(start_page)
+            main_url = url + '?pagenumber=' + str(start_page)
+        else:
+            main_url = url
 
 
         nth_element = int(len(json_data_list) % 20)
 
-        return url, json_data_list, nth_element, start_page
+        return  main_url, json_data_list, nth_element, start_page
 
     else:
         with open(file_name, mode='w', encoding='utf-8') as f:
@@ -64,7 +65,7 @@ def Captcha_Bypass(driver):
 
 def Allow_cookies(driver):
     WebDriverWait(driver,20).until(EC.frame_to_be_available_and_switch_to_it((By.XPATH,'//*[@id="gdpr-consent-notice"]')))
-    WebDriverWait(driver,20).until(EC.element_to_be_clickable((By.XPATH, '//*[@id="save"]'))).click()
+    WebDriverWait(driver,30).until(EC.element_to_be_clickable((By.XPATH, '//*[@id="save"]'))).click()
 
 def Selenium_scraper(url, file_name, json_data_list, start_page, nth_element, driver):
 
@@ -88,18 +89,25 @@ def Selenium_scraper(url, file_name, json_data_list, start_page, nth_element, dr
     try:
         num_of_pages = int(driver.find_element_by_css_selector('.p-items:nth-child(7) a').text)
     except:
-        num_of_pages = int(driver.find_element_by_css_selector('.p-items:nth-child(8) a').text)
+        try:
+            num_of_pages = int(driver.find_element_by_css_selector('.p-items:nth-child(8) a').text)
+        except:
+            try:
+                num_of_pages = int(driver.find_element_by_css_selector('.p-active+ .p-items a').text)
+            except:
+                num_of_pages = int(driver.find_element_by_css_selector('.p-active a').text)
+            
     print('Num of pages : ', num_of_pages)
 
     for page in range(start_page, int(num_of_pages)):
         print('Page : ', page)
         names = []
         driver.implicitly_wait(5)
-        #if page == 1:
-        all_links = driver.find_elements_by_css_selector('a .maxtwolinerHeadline')
-        #else:
-        #    all_links = driver.find_elements_by_css_selector('#resultListItems .font-regular')
 
+        all_links = driver.find_elements_by_css_selector('a .maxtwolinerHeadline')
+        if len(all_links) != 20 or page == num_of_pages:
+            all_links = driver.find_elements_by_css_selector('.onlyLarge:nth-child(1)')
+        
         for n in all_links:
             names.append(n.text)
 
@@ -109,7 +117,7 @@ def Selenium_scraper(url, file_name, json_data_list, start_page, nth_element, dr
         if start_page != page:
             nth_element = 0
 
-        for name in names[nth_element:]:
+        for name in names[nth_element:1]:
             
             try:
                 link = WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.LINK_TEXT, name)))
@@ -148,20 +156,18 @@ def Selenium_scraper(url, file_name, json_data_list, start_page, nth_element, dr
             except:
                 address = ""
 
+            grid_dict = {}
             try:
-                gkeys = []
-                gvalues = []
-                for i, grid in enumerate(soup.select('.two-fifths , .three-fifths')):
-                    if i % 2 == 0:
-                        gkeys.append(grid.get_text(strip=True))
-                    else:
-                        gvalues.append(grid.get_text(strip=True))
-
-                grid_dict = {}
-                for k, v in zip(gkeys, gvalues):
-                    grid_dict[k] = v
+                parameter_list = soup.select('dl.grid')
+                for l in parameter_list:
+                    try:
+                        tag = l.select_one('dt').get_text(strip=True)
+                        val = l.select_one('dd').get_text(strip=True)
+                        grid_dict[tag] = val
+                    except:
+                        continue
             except:
-                grid_dict = {}
+                pass
 
             try:
                 objectb = soup.select_one('.is24qa-objektbeschreibung-label').get_text(strip=True)
@@ -188,6 +194,24 @@ def Selenium_scraper(url, file_name, json_data_list, start_page, nth_element, dr
         next_page = WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.CSS_SELECTOR, '.is24-icon-chevron-right.vertical-center')))
         next_page.click()
 
+def Append_files(temp_file, main_file):
+    with open(temp_file, 'r') as f:
+        temp_json = json.load(f)
+
+    if os.path.isfile(main_file):
+        with open(main_file, 'r') as f:
+            main_json = json.load(f)
+    else:
+        main_json = []
+
+    append_json = main_json + temp_json
+
+    with open(main_file, 'w') as f:
+        json.dump(append_json, f, indent=4, default='str')
+
+    os.remove(temp_file)
+
+
 url_list = ["https://www.immobilienscout24.de/Suche/de/berlin/berlin/wohnung-mieten",
             "https://www.immobilienscout24.de/Suche/de/bayern/wohnung-mieten",
             "https://www.immobilienscout24.de/Suche/de/brandenburg/wohnung-mieten",
@@ -206,19 +230,26 @@ url_list = ["https://www.immobilienscout24.de/Suche/de/berlin/berlin/wohnung-mie
 
 
 def MW():
-    file_name = 'Mieten_Wohnungen.json'
+    main_file = 'Mieten_Wohnungen.json'
 
-    for url in url_list:
+    for url in url_list[10:]:
+        temp_file = 'temp_' + main_file
         while True:
             try:
+                url, json_data_list, nth_element, start_page = page_counter(temp_file, url)
+
                 driver = webdriver.Chrome(chrome_options=opts, executable_path=r'G:\chromedriver.exe')
                 driver.get(url)
 
-                url, json_data_list, nth_element, start_page = page_counter(file_name, url)
-                Selenium_scraper(url, file_name, json_data_list, start_page, nth_element, driver)
-                if url == url_list[-1]:
-                    break
+                Selenium_scraper(url, temp_file, json_data_list, start_page, nth_element, driver)
+
+                Append_files(temp_file, main_file)
+
+                driver.quit()
+                break
 
             except TimeoutException as exception:
                 driver.quit()
                 continue
+
+MW()

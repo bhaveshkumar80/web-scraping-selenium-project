@@ -89,7 +89,14 @@ def Selenium_scraper(url, file_name, json_data_list, start_page, nth_element, dr
     try:
         num_of_pages = int(driver.find_element_by_css_selector('.p-items:nth-child(7) a').text)
     except:
-        num_of_pages = int(driver.find_element_by_css_selector('.p-items:nth-child(8) a').text)
+        try:
+            num_of_pages = int(driver.find_element_by_css_selector('.p-items:nth-child(8) a').text)
+        except:
+            try:
+                num_of_pages = int(driver.find_element_by_css_selector('.p-active+ .p-items a').text)
+            except:
+                num_of_pages = int(driver.find_element_by_css_selector('.p-active a').text)
+
     print('Num of pages : ', num_of_pages)
 
     for page in range(start_page, int(num_of_pages)):
@@ -149,20 +156,18 @@ def Selenium_scraper(url, file_name, json_data_list, start_page, nth_element, dr
             except:
                 address = ""
 
+            grid_dict = {}
             try:
-                gkeys = []
-                gvalues = []
-                for i, grid in enumerate(soup.select('.two-fifths , .three-fifths')):
-                    if i % 2 == 0:
-                        gkeys.append(grid.get_text(strip=True))
-                    else:
-                        gvalues.append(grid.get_text(strip=True))
-
-                grid_dict = {}
-                for k, v in zip(gkeys, gvalues):
-                    grid_dict[k] = v
+                parameter_list = soup.select('dl.grid')
+                for l in parameter_list:
+                    try:
+                        tag = l.select_one('dt').get_text(strip=True)
+                        val = l.select_one('dd').get_text(strip=True)
+                        grid_dict[tag] = val
+                    except:
+                        continue
             except:
-                grid_dict = {}
+                pass
 
             try:
                 objectb = soup.select_one('.is24qa-objektbeschreibung-label').get_text(strip=True)
@@ -206,25 +211,47 @@ url_list = ["https://www.immobilienscout24.de/Suche/de/baden-wuerttemberg/grunds
             "https://www.immobilienscout24.de/Suche/de/schleswig-holstein/grundstueck-kaufen",
             "https://www.immobilienscout24.de/Suche/de/thueringen/grundstueck-kaufen"]
 
+def Append_files(temp_file, main_file):
+    with open(temp_file, 'r') as f:
+        temp_json = json.load(f)
+
+    if os.path.isfile(main_file):
+        with open(main_file, 'r') as f:
+            main_json = json.load(f)
+    else:
+        main_json = []
+
+    append_json = main_json + temp_json
+
+    with open(main_file, 'w') as f:
+        json.dump(append_json, f, indent=4, default='str')
+
+    os.remove(temp_file)
+
+
 def KG():
-    file_name = 'Kaufen_Grundstuck.json'
+    main_file = 'Kaufen_Grundstuck.json'
 
     for url in url_list:
-
+        temp_file = 'temp_' + main_file
         while True:
             try:
+                url, json_data_list, nth_element, start_page = page_counter(temp_file, url)
+
                 driver = webdriver.Chrome(chrome_options=opts, executable_path=r'G:\chromedriver.exe')
                 driver.get(url)
-                
-                url, json_data_list, nth_element, start_page = page_counter(file_name, url)
-                Selenium_scraper(url, file_name, json_data_list, start_page, nth_element, driver)
-                if url == url_list[-1]:
-                    break
+
+                Selenium_scraper(url, temp_file, json_data_list, start_page, nth_element, driver)
+
+                Append_files(temp_file, main_file)
+
+                driver.quit()
+                break
 
             except TimeoutException as exception:
                 driver.quit()
                 continue
-     
+
 
 
 

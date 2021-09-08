@@ -16,5 +16,4 @@ def convert(file):
         json_data = json.load(f, strict=False)
     df = pd.json_normalize(json_data)
     df['Scout id'] = df['Scout id'].apply(lambda x: Data_cleaning(x))
-    csv_file = file.split('.')[0] + '.csv'
-    df(csv_file, index=False)
+    return df
