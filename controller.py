@@ -1,6 +1,7 @@
 import os
 import json
 import pandas as pd
+import schedule
 
 
 import Kaufen_Anlageobjekte
@@ -27,5 +28,11 @@ def Run():
     Mieten_Wohnungen.MW()
     convert('Mieten_Wohnungen.json')
 
+#schedule.every(2).weeks.do(Run)
+
+
+# while True:
+#     schedule.run_pending()
+#     time.sleep(1)
 
 Run()

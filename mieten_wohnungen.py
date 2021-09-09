@@ -99,14 +99,15 @@ def Selenium_scraper(url, file_name, json_data_list, start_page, nth_element, dr
             
     print('Num of pages : ', num_of_pages)
 
-    for page in range(start_page, int(num_of_pages)):
+    for page in range(start_page, int(num_of_pages) + 1):
         print('Page : ', page)
         names = []
         driver.implicitly_wait(5)
 
         all_links = driver.find_elements_by_css_selector('a .maxtwolinerHeadline')
-        if len(all_links) != 20 or page == num_of_pages:
+        if len(all_links) < 20:
             all_links = driver.find_elements_by_css_selector('.onlyLarge:nth-child(1)')
+
         
         for n in all_links:
             names.append(n.text)
@@ -117,7 +118,7 @@ def Selenium_scraper(url, file_name, json_data_list, start_page, nth_element, dr
         if start_page != page:
             nth_element = 0
 
-        for name in names[nth_element:1]:
+        for name in names[nth_element:]:
             
             try:
                 link = WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.LINK_TEXT, name)))
@@ -232,13 +233,13 @@ url_list = ["https://www.immobilienscout24.de/Suche/de/berlin/berlin/wohnung-mie
 def MW():
     main_file = 'Mieten_Wohnungen.json'
 
-    for url in url_list[10:]:
+    for url in url_list:
         temp_file = 'temp_' + main_file
         while True:
             try:
                 url, json_data_list, nth_element, start_page = page_counter(temp_file, url)
 
-                driver = webdriver.Chrome(chrome_options=opts, executable_path=r'G:\chromedriver.exe')
+                driver = webdriver.Chrome(chrome_options=opts, executable_path=r'chromedriver.exe')
                 driver.get(url)
 
                 Selenium_scraper(url, temp_file, json_data_list, start_page, nth_element, driver)

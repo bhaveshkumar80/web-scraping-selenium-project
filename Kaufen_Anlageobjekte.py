@@ -84,6 +84,7 @@ def Selenium_scraper(url, file_name, json_data_list, start_page, nth_element, dr
     # [baden-wuerttemberg, bayern, hessen, niedersachsen, nordrhein-westfalen, rheinland-pfalz, thueringen]
 
     driver.implicitly_wait(5)
+
     try:
         num_of_pages = int(driver.find_element_by_css_selector('.p-items:nth-child(7) a').text)
     except:
@@ -95,16 +96,18 @@ def Selenium_scraper(url, file_name, json_data_list, start_page, nth_element, dr
             except:
                 num_of_pages = int(driver.find_element_by_css_selector('.p-active a').text)
 
-    print('Num of pages : ', num_of_pages)
+    print('Num of pages: ',num_of_pages)
 
-    for page in range(start_page, int(num_of_pages)):
+
+    for page in range(start_page, int(num_of_pages)+1):
         print('Page : ', page)
         names = []
         driver.implicitly_wait(5)
-        #if page == 1:
+        
         all_links = driver.find_elements_by_css_selector('a .maxtwolinerHeadline')
-        #else:
-        #    all_links = driver.find_elements_by_css_selector('#resultListItems .font-regular')
+        if len(all_links) < 20:
+            all_links = driver.find_elements_by_css_selector('.onlyLarge:nth-child(1)')
+        
 
         for n in all_links:
             names.append(n.text)
@@ -124,6 +127,9 @@ def Selenium_scraper(url, file_name, json_data_list, start_page, nth_element, dr
                 link_header = link.get_attribute('href')
             except:
                 link_header = ""
+
+            if link_header.split('.')[-1] == 'html':
+                continue
 
             link.click()
 
@@ -233,7 +239,7 @@ def KA():
             try:
                 url, json_data_list, nth_element, start_page = page_counter(temp_file, url)
 
-                driver = webdriver.Chrome(chrome_options=opts, executable_path=r'G:\chromedriver.exe')
+                driver = webdriver.Chrome(chrome_options=opts, executable_path=r'chromedriver.exe')
                 driver.get(url)
 
                 Selenium_scraper(url, temp_file, json_data_list, start_page, nth_element, driver)
@@ -246,5 +252,7 @@ def KA():
             except TimeoutException as exception:
                 driver.quit()
                 continue
+
+KA()
 
 

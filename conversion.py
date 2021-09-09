@@ -12,8 +12,11 @@ def Data_cleaning(data):
         return d1
 
 def convert(file):
-    with open(json_file, 'r', encoding='utf-8') as f:
+    with open(file, 'r', encoding='utf-8') as f:
         json_data = json.load(f, strict=False)
     df = pd.json_normalize(json_data)
     df['Scout id'] = df['Scout id'].apply(lambda x: Data_cleaning(x))
-    return df
+    csv_file = file.split('.')[0] + '.csv'
+    df.to_csv(csv_file, index=False)
+
+convert('temp_Kaufen_Haus.json')

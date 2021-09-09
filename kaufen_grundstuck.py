@@ -99,14 +99,14 @@ def Selenium_scraper(url, file_name, json_data_list, start_page, nth_element, dr
 
     print('Num of pages : ', num_of_pages)
 
-    for page in range(start_page, int(num_of_pages)):
+    for page in range(start_page, int(num_of_pages)+1):
         print('Page : ', page)
         names = []
         driver.implicitly_wait(5)
         #if page == 1:
         all_links = driver.find_elements_by_css_selector('a .maxtwolinerHeadline')
-        #else:
-        #    all_links = driver.find_elements_by_css_selector('#resultListItems .font-regular')
+        if len(all_links) < 20:
+            all_links = driver.find_elements_by_css_selector('.onlyLarge:nth-child(1)')
 
         for n in all_links:
             names.append(n.text)
@@ -238,7 +238,7 @@ def KG():
             try:
                 url, json_data_list, nth_element, start_page = page_counter(temp_file, url)
 
-                driver = webdriver.Chrome(chrome_options=opts, executable_path=r'G:\chromedriver.exe')
+                driver = webdriver.Chrome(chrome_options=opts, executable_path=r'chromedriver.exe')
                 driver.get(url)
 
                 Selenium_scraper(url, temp_file, json_data_list, start_page, nth_element, driver)
@@ -252,15 +252,4 @@ def KG():
                 driver.quit()
                 continue
 
-
-
-
-
-
-#//*[@id="is24-content"]/div[3]/div[1]/div[2]/dl[1]/dt
-#//*[@id="is24-content"]/div[3]/div[1]/div[2]/dl[2]/dt
-
-#//*[@id="is24-content"]/div[3]/div[1]/div[2]/dl[1]
-
-# //*[@id="result-xl-129280384"]/div[1]/a[1]
-# //*[@id="result-xl-128580468"]/div[1]/a[1]
+KG()
