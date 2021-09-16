@@ -19,4 +19,4 @@ def convert(file):
     csv_file = file.split('.')[0] + '.csv'
     df.to_csv(csv_file, index=False)
 
-convert('temp_Kaufen_Haus.json')
+convert('Kaufen_Haus.json')

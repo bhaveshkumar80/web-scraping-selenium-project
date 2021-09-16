@@ -5,13 +5,14 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.common.action_chains import ActionChains
 from selenium.webdriver.chrome.options import Options
-from selenium.common.exceptions import TimeoutException
+from selenium.common.exceptions import TimeoutException, ElementClickInterceptedException
 import time
 import random
 from datetime import datetime
 import json
 from bs4 import BeautifulSoup
 import os
+import re
 
 opts = Options()
 opts.add_argument("user-agent=whatever you want")
@@ -27,20 +28,20 @@ def page_counter(file_name, url, json_data_list = [], nth_element = 0, start_pag
 
         start_page = int(len(json_data_list) // 20) + 1
         if len(json_data_list) >= 20:
-            main_url = url + '?pagenumber=' + str(start_page)
+            new_url = url + '?pagenumber=' + str(start_page)
         else:
-            main_url = url
-
+            new_url = url
 
         nth_element = int(len(json_data_list) % 20)
 
-        return  main_url, json_data_list, nth_element, start_page
+        return new_url, json_data_list, nth_element, start_page
 
     else:
         with open(file_name, mode='w', encoding='utf-8') as f:
             json.dump([], f)
 
-        return url, json_data_list, nth_element, start_page
+        new_url = url
+        return new_url, json_data_list, nth_element, start_page
 
 def Captcha_Bypass(driver):
 
@@ -69,35 +70,37 @@ def Allow_cookies(driver):
 
 def Selenium_scraper(url, file_name, json_data_list, start_page, nth_element, driver):
 
-    bypass = 0
+    count = 0
     while True:
         try:
             Captcha_Bypass(driver)
             Allow_cookies(driver)
-            bypass = 1
+            break
         except:
             driver.get(url)
-            pass
-
-        if bypass == 1:
-            break
-
-    # [baden-wuerttemberg, bayern, hessen, niedersachsen, nordrhein-westfalen, rheinland-pfalz, thueringen]
+            count += 1
+            if count == 5:
+                raise TimeoutException
+                
+            continue
 
     driver.implicitly_wait(5)
 
-    try:
-        num_of_pages = int(driver.find_element_by_css_selector('.p-items:nth-child(7) a').text)
-    except:
+    num_of_pages = driver.find_element_by_css_selector('.p-items:nth-child(7) a').text
+    if num_of_pages == '...':
+        num_of_pages = driver.find_element_by_css_selector('.p-items:nth-child(8) a').text
+
+    if num_of_pages == '':
         try:
-            num_of_pages = int(driver.find_element_by_css_selector('.p-items:nth-child(8) a').text)
+            num_of_pages = int(num_of_pages = int(driver.find_element_by_css_selector('.p-active+ .p-items a').text))
         except:
-            try:
-                num_of_pages = int(driver.find_element_by_css_selector('.p-active+ .p-items a').text)
-            except:
-                num_of_pages = int(driver.find_element_by_css_selector('.p-active a').text)
-            
+            num_of_pages = int(num_of_pages = int(driver.find_element_by_css_selector('.p-active a').text))
+
+    if 'th' in num_of_pages:
+        num_of_pages = int(re.search(r'\d+', num_of_pages).group())
+
     print('Num of pages : ', num_of_pages)
+
 
     for page in range(start_page, int(num_of_pages) + 1):
         print('Page : ', page)
@@ -118,7 +121,7 @@ def Selenium_scraper(url, file_name, json_data_list, start_page, nth_element, dr
         if start_page != page:
             nth_element = 0
 
-        for name in names[nth_element:]:
+        for i, name in enumerate(names[nth_element:]):
             
             try:
                 link = WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.LINK_TEXT, name)))
@@ -133,6 +136,9 @@ def Selenium_scraper(url, file_name, json_data_list, start_page, nth_element, dr
 
             if link_header.split('.')[-1] == 'html':
                 continue
+
+            if i == 0:
+                time.sleep(15)
 
             link.click()
 
@@ -237,20 +243,21 @@ def MW():
         temp_file = 'temp_' + main_file
         while True:
             try:
-                url, json_data_list, nth_element, start_page = page_counter(temp_file, url)
+                new_url, json_data_list, nth_element, start_page = page_counter(temp_file, url)
 
                 driver = webdriver.Chrome(chrome_options=opts, executable_path=r'chromedriver.exe')
-                driver.get(url)
+                driver.get(new_url)
 
-                Selenium_scraper(url, temp_file, json_data_list, start_page, nth_element, driver)
+                Selenium_scraper(new_url, temp_file, json_data_list, start_page, nth_element, driver)
 
                 Append_files(temp_file, main_file)
 
                 driver.quit()
                 break
 
-            except TimeoutException as exception:
+            except (TimeoutException, ElementClickInterceptedException) as exception:
                 driver.quit()
+                time.sleep(180)
                 continue
 
 MW()
